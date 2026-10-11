@@ -5,7 +5,7 @@ const KEY = 'bounceback.v1';
 const DEF = () => ({
   v: 1,
   profile: { name: '', goals: [], why: '', skip: [], weight: '', protein: 100, water: 64, move: 90, flags: {}, done: false },
-  days: {}, supps: [], pantry: {}, plan: [], extra: [], got: {}, weights: [], showWeight: false, myGoals: [], reflect: {},
+  days: {}, supps: [], pantry: {}, plan: [], extra: [], got: {}, weights: [], showWeight: false, myGoals: [], reflect: {}, theme: 'heather', cowName: '', cases: 0,
   rem: { items: [
     { id: 'w1', label: 'Glass of water to start the day', time: '07:30', on: true },
     { id: 'w2', label: 'Water break', time: '10:30', on: true },
@@ -45,7 +45,7 @@ let toastT;
 function toast(msg) { let t = $('.toast'); if (t) t.remove(); t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg; document.body.appendChild(t); clearTimeout(toastT); toastT = setTimeout(() => t.remove(), 2600); }
 function sheet(html) { $('#overlay').innerHTML = '<div class="sheetbg" data-a="closeBg"><div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>' + html + '</div></div>'; }
 function closeSheet() { $('#overlay').innerHTML = ''; }
-const COW = size => `<svg class="cow" width="${size}" height="${size}" viewBox="0 0 64 64" aria-hidden="true"><path d="M8 20c-4-2-6-7-5-12 4 1 9 4 12 9zM56 20c4-2 6-7 5-12-4 1-9 4-12 9z" fill="#E9DCC3" stroke="#8A6B4A" stroke-width="1.5"/><ellipse cx="11" cy="30" rx="6" ry="4" fill="#B5743F" transform="rotate(-20 11 30)"/><ellipse cx="53" cy="30" rx="6" ry="4" fill="#B5743F" transform="rotate(20 53 30)"/><path d="M14 30c0-12 8-19 18-19s18 7 18 19c0 16-7 26-18 26S14 46 14 30z" fill="#C8894E"/><ellipse cx="32" cy="46" rx="11" ry="8.5" fill="#F3D9C4"/><ellipse cx="27.5" cy="46" rx="1.8" ry="2.4" fill="#8A5A48"/><ellipse cx="36.5" cy="46" rx="1.8" ry="2.4" fill="#8A5A48"/><path d="M15 31c1-11 5-18 9-20 0 7-1 15-4 23zM49 31c-1-11-5-18-9-20 0 7 1 15 4 23zM23 13c3 6 3 14 1 22 4-6 6-13 6-22zM41 13c-3 6-3 14-1 22-4-6-6-13-6-22zM28 11h8c1 8 0 15-4 22-4-7-5-14-4-22z" fill="#A9682F"/></svg>`;
+const COW = (size, mood, acc) => cow(size, mood, acc);
 const ICON = {
   today: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4"/></svg>',
   kitchen: '<svg viewBox="0 0 24 24"><path d="M6 3v7a2 2 0 0 0 4 0V3M8 3v18M17 3c-2 2-3 5-3 8h3zM17 11v10"/></svg>',
@@ -64,25 +64,30 @@ function grab() { // pull current onboarding inputs into the profile
   const p = P(), v = id => { const el = $('#' + id); return el ? el.value.trim() : null; };
   if (v('obName') !== null) p.name = v('obName');
   if (v('obWhy') !== null) p.why = v('obWhy');
+  if (v('obCow') !== null) S.cowName = v('obCow');
   if (v('obWeight') !== null) p.weight = v('obWeight');
   ['protein', 'water', 'move'].forEach(k => { const x = v('ob_' + k); if (x !== null && +x > 0) p[k] = Math.round(+x); });
 }
 function renderOnboard() {
-  const p = P(), n = 5, s = ob.step;
+  const p = P(), ORD = ['hi', 'yours', 'goals', 'food', 'targets', 'rem'], n = ORD.length, s = ob.step, k = ORD[s];
   const dots = '<div class="dots">' + Array.from({ length: n }, (_, i) => `<i class="${i <= s ? 'on' : ''}"></i>`).join('') + '</div>';
   let body = '';
-  if (s === 0) body = `<div style="margin-top:8vh">${COW(84)}</div><h1 style="margin-top:14px">Bounce Back</h1>
+  if (k === 'hi') body = `<div style="margin-top:5vh">${COW(132, 'hi', 'mug')}</div><h1 style="margin-top:14px;font-size:38px">Bounce Back</h1>
     <p class="muted" style="margin-top:10px;font-size:17px">A little space for getting your health back, at your pace. Food, water, movement and the small stuff that helps.</p>
     <div class="card" style="margin-top:22px"><label class="f" for="obName">What should we call you?</label><input id="obName" autocomplete="given-name" value="${esc(p.name)}" placeholder="Your first name"></div>
     <p class="tiny muted" style="margin-top:14px">Everything you enter stays on this phone. Nobody else can see it, and you can change or erase any of it later.</p>`;
-  if (s === 1) body = `<h1>What matters to you right now?</h1><p class="muted" style="margin-top:8px">Pick as many as you like. These are yours to change any time.</p>
+  if (k === 'yours') body = `<h1>Make it yours</h1><p class="muted" style="margin-top:8px">Pick the colors you like. You can switch any time.</p>
+    <div class="swatches" style="margin-top:16px">${swatches()}</div>
+    <div class="card" style="margin-top:20px"><div class="row" style="gap:14px">${COW(84, 'happy')}<div class="grow"><label class="f" for="obCow">This is your Highland cow. Name?</label><input id="obCow" value="${esc(S.cowName)}" placeholder="Hazel, Fergus, Mabel…" maxlength="16"></div></div>
+    <p class="small muted" style="margin-top:10px">She keeps you company, hands out stickers, and knows a few cow facts. Tap her any time.</p></div>`;
+  if (k === 'goals') body = `<h1>What matters to you right now?</h1><p class="muted" style="margin-top:8px">Pick as many as you like. These are yours to change any time.</p>
     <div class="chips" style="margin-top:18px">${GOALS.map(g => `<button class="chip ${p.goals.includes(g[0]) ? 'on' : ''}" data-a="obGoal" data-id="${g[0]}" aria-pressed="${p.goals.includes(g[0])}">${g[1]}</button>`).join('')}</div>
     <div style="margin-top:22px"><label class="f" for="obWhy">In your own words, what would feeling better look like?</label><textarea id="obWhy" placeholder="Optional. Something like: keep up with the kids without stopping to catch my breath.">${esc(p.why)}</textarea></div>`;
-  if (s === 2) body = `<h1>Anything you don't eat?</h1><p class="muted" style="margin-top:8px">Tap what to leave out and meal ideas will skip it.</p>
+  if (k === 'food') body = `<h1>Anything you don't eat?</h1><p class="muted" style="margin-top:8px">Tap what to leave out and meal ideas will skip it.</p>
     <div class="chips" style="margin-top:18px">${SKIP_GROUPS.map(g => `<button class="chip ${p.skip.includes(g[0]) ? 'on' : ''}" data-a="obSkip" data-id="${g[0]}" aria-pressed="${p.skip.includes(g[0])}">${g[1]}</button>`).join('')}</div>
     <div class="card" style="margin-top:22px"><h3>Good to know, only if it applies</h3><p class="small muted" style="margin-top:4px">These just adjust the tips you see. Skip them if you'd rather not say.</p>
     <div class="list" style="margin-top:6px">${[['fluid', 'My doctor has set a limit on how much I drink'], ['kidney', 'I have a kidney condition'], ['preg', 'I\'m pregnant or breastfeeding'], ['knee', 'My knees bother me or I have an injury']].map(f => `<button data-a="obFlag" data-id="${f[0]}" style="width:100%;text-align:left"><span class="check ${p.flags[f[0]] ? 'on' : ''}">✓</span><span class="grow small">${f[1]}</span></button>`).join('')}</div></div>`;
-  if (s === 3) {
+  if (k === 'targets') {
     const lb = parseFloat(p.weight), rng = lb > 60 && !p.flags.kidney ? suggestProtein(lb) : null;
     body = `<h1>Set your daily targets</h1><p class="muted" style="margin-top:8px">Starting points, not rules. Pick numbers that feel doable; you can raise them later.</p>
     <div class="card" style="margin-top:18px"><label class="f" for="ob_protein">Protein each day (grams)</label><input id="ob_protein" type="number" inputmode="numeric" min="20" max="250" value="${p.protein}">
@@ -94,13 +99,19 @@ function renderOnboard() {
     <div class="card"><label class="f" for="ob_move">Movement each week (minutes)</label><input id="ob_move" type="number" inputmode="numeric" min="10" max="900" value="${p.move}">
       <p class="small muted" style="margin-top:8px">The long-term guideline for adults is 150 minutes a week. Starting at 60–90 and building up is a fine plan.</p></div>`;
   }
-  if (s === 4) body = `<h1>Reminders</h1><p class="muted" style="margin-top:8px">Gentle nudges, never guilt. Turn on the ones you want; you can change the times in Settings.</p>
+  if (k === 'rem') body = `<h1>Reminders</h1><p class="muted" style="margin-top:8px">Gentle nudges, never guilt. Turn on the ones you want; you can change the times in Settings.</p>
     <div class="card" style="margin-top:18px"><div class="list">${S.rem.items.map(r => `<button data-a="remToggle" data-id="${r.id}" style="width:100%;text-align:left"><span class="check ${r.on ? 'on' : ''}">✓</span><span class="grow">${esc(r.label)}</span><span class="muted small">${fmtTime(r.time)}</span></button>`).join('')}</div></div>
     <p class="small muted" style="margin-top:12px">After this, Settings will show you how to put these on your phone's calendar so they buzz even when the app is closed.</p>`;
   $('#app').innerHTML = `<div class="ob">${dots}<div style="margin-top:20px">${body}</div>
     <div class="foot row">${s > 0 ? '<button class="btn ghost" data-a="obBack">Back</button>' : ''}<button class="btn grow" data-a="obNext">${s === n - 1 ? 'Start' : 'Continue'}</button></div></div>`;
   $('#tabs').hidden = true;
 }
+function swatches() { return THEMES.map(t => `<button class="swatch ${S.theme === t[0] ? 'on' : ''}" data-a="theme" data-id="${t[0]}" aria-pressed="${S.theme === t[0]}"><i>${t[2].map(c => `<b style="background:${c}"></b>`).join('')}</i>${t[1]}</button>`).join(''); }
+function applyTheme() { const t = THEMES.find(x => x[0] === S.theme) || THEMES[0]; document.documentElement.dataset.theme = t[0]; const m = $('meta[name="theme-color"]'); if (m) m.content = t[2][0]; }
+function clues(d) { const p = P(); return [['Protein goal', sumP(d) >= p.protein], ['Water goal', sumW(d) >= p.water], ['Moved 10 minutes', sumM(d) >= 10], ['Energy check-in', !!d.energy]]; }
+function checkCase() { const d = day(); if (d.case || !clues(d).every(c => c[1])) return; d.case = 1; S.cases = (S.cases || 0) + 1; save(); confetti(); const st = STICKERS[S.cases - 1]; setTimeout(() => toast(st ? 'Case closed! New sticker: ' + st[0] : 'Case closed! That makes ' + S.cases + '.'), 50); }
+const doy = () => { const n = new Date(); return Math.floor((n - new Date(n.getFullYear(), 0, 0)) / 864e5); };
+let boopText = '', boopT;
 function fmtTime(t) { const [h, m] = t.split(':').map(Number); return ((h + 11) % 12 + 1) + ':' + pad(m) + (h < 12 ? ' am' : ' pm'); }
 
 /* ---------- food helpers ---------- */
@@ -135,39 +146,49 @@ function renderToday() {
   const sug = suggestRoutine(), todayM = sumM(d);
   const supList = S.supps;
   const E = ['Drained', 'Low', 'Okay', 'Good', 'Great'];
-  return `<header class="row between"><div><div class="eyebrow">${new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</div><h1 style="margin-top:4px">${hi}${p.name ? ', ' + esc(p.name) : ''}</h1></div>
-    <button data-a="settings" aria-label="Settings" title="Settings">${COW(54)}</button></header>
-  ${p.why ? `<p class="muted small" style="margin-top:8px;font-style:italic">"${esc(p.why)}"</p>` : ''}
+  const ph = phaseOf(h), cl = clues(d), found = cl.filter(c => c[1]).length;
+  const line = boopText || (d.case ? 'Case closed. I never doubted you.' : ph === 'night' ? 'Lights low. A stretch, then bed?' : ph === 'morning' && !wa ? 'Morning. Water first or coffee first? I won\'t tell.' : found ? found + ' of 4 clues found. Keep digging.' : 'New day, new case. Tap me for a cow fact.');
+  const mood = d.case ? ['happy', 'crown'] : ph === 'night' ? ['sleepy', 'zzz'] : ph === 'morning' ? ['hi', 'mug'] : ['hi', ''];
+  return `<div class="hero ${ph}">${hills(ph)}<button class="gear" data-a="settings" aria-label="Settings"><svg viewBox="0 0 24 24">${GLYPH.gear}</svg></button>
+    <div class="txt"><div class="small" style="font-weight:700;opacity:.8">${new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</div><h1 style="margin-top:2px">${hi}${p.name ? ', ' + esc(p.name) : ''}</h1><div class="bubble hand" aria-live="polite">${esc(line)}</div></div>
+    <div class="cowwrap"><button class="cowbtn ${boopText ? 'boop' : ''}" data-a="boop" aria-label="Tap ${esc(S.cowName || 'the cow')}">${COW(124, mood[0], mood[1])}</button>${S.cowName ? `<span class="nametag">${esc(S.cowName)}</span>` : ''}</div></div>
+  ${p.why ? `<p class="muted small" style="margin-top:10px;font-style:italic">"${esc(p.why)}"</p>` : ''}
 
-  <div class="card" style="margin-top:16px"><div class="row between"><h2>How's your energy?</h2>${d.energy ? '<span class="badge plum">noted</span>' : ''}</div>
+  <div class="case" data-tab="Case file no. ${doy()}"><h2>${esc(CASES[doy() % CASES.length])}</h2>${d.case ? '<div class="stamp">CASE<br>CLOSED</div>' : ''}
+    <div class="clues">${cl.map(c => `<div class="clue ${c[1] ? 'on' : ''}"><b>${c[1] ? '✓' : '?'}</b>${c[0]}</div>`).join('')}</div>
+    <p class="small" style="margin-top:10px;opacity:.8">${d.case ? 'Solved. A sticker went into your book on the Progress tab.' : 'Find all four clues today to close the case and earn a sticker.'}</p></div>
+
+  <div class="card"><div class="row">${glyph('bolt', 'h')}<h2 class="grow">How's your energy?</h2>${d.energy ? '<span class="badge sage">noted</span>' : ''}</div>
     <div class="energy" style="margin-top:10px" role="group" aria-label="Energy today">${E.map((t, i) => `<button class="${d.energy === i + 1 ? 'on' : ''}" data-a="energy" data-v="${i + 1}" aria-pressed="${d.energy === i + 1}">${t}</button>`).join('')}</div></div>
 
-  <div class="card"><div class="row between"><h2>Protein</h2><button class="linkbtn small" data-a="logMeal">Log a meal</button></div>
-    <div class="row" style="margin-top:12px;gap:16px">${ring(pr, p.protein, 'var(--rose)')}
+  <div class="card"><div class="row">${glyph('egg', 'p')}<h2 class="grow">Protein</h2><button class="linkbtn small" data-a="logMeal">Log a meal</button></div>
+    <div class="row" style="margin-top:12px;gap:16px">${ring(pr, p.protein, 'var(--plum)')}
       <div class="grow"><p class="small muted">${pr >= p.protein ? 'Goal met. Nicely done.' : pr === 0 ? 'Tap what you\'ve had. A rough guess is good enough.' : (p.protein - pr) + ' g to go. A snack or one more meal gets you there.'}</p>
       <div class="row" style="margin-top:10px;gap:8px">${[10, 20, 30].map(g => `<button class="quick p" data-a="addP" data-g="${g}">+${g}</button>`).join('')}</div></div></div>
     ${d.p.length ? `<div class="chips" style="margin-top:12px">${d.p.map((x, i) => `<button class="chip" data-a="delP" data-i="${i}" aria-label="Remove ${x.g} grams">${esc(x.l || 'Protein')} · ${x.g}g ✕</button>`).join('')}</div>` : ''}</div>
 
-  <div class="card"><div class="row between"><h2>Water</h2>${d.w.length ? '<button class="linkbtn small" data-a="undoW">Undo last</button>' : ''}</div>
+  <div class="card"><div class="row">${glyph('drop', 'w')}<h2 class="grow">Water</h2>${d.w.length ? '<button class="linkbtn small" data-a="undoW">Undo last</button>' : ''}</div>
     <div class="row" style="margin-top:12px;gap:16px"><div class="bottle" aria-hidden="true"><i style="height:${pct(wa, p.water)}%"></i></div>
       <div class="grow"><div><span class="big">${wa}</span> <span class="muted">of ${p.water} oz</span></div>
       <p class="small muted" style="margin-top:4px">${wa >= p.water ? 'You hit your water goal.' : p.flags.fluid ? 'Stay within the limit your doctor set.' : 'Sip through the day. No need to catch up all at once.'}</p>
-      <div class="row" style="margin-top:10px;gap:8px">${[8, 16, 24].map(o => `<button class="quick w" data-a="addW" data-o="${o}">+${o} oz</button>`).join('')}</div></div></div></div>
+      <div class="row" style="margin-top:10px;gap:8px">${[8, 16, 24].map(o => `<button class="quick w" data-a="addW" data-o="${o}">+${o} oz</button>`).join('')}</div></div></div>
+    <div class="row between" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)"><div class="mugs">${d.c ? Array.from({ length: Math.min(d.c, 8) }, () => glyph('mug', 'h')).join('') + `<span class="small muted" style="margin-left:4px">${d.c} coffee${d.c > 1 ? 's' : ''}</span>` : '<span class="small muted">Coffee counts as a little joy.</span>'}</div>
+      <div class="row">${d.c ? '<button class="linkbtn small" data-a="coffee" data-n="-1">Undo</button>' : ''}<button class="btn sm soft" data-a="coffee" data-n="1">+ Coffee</button></div></div></div>
 
-  <div class="card"><div class="row between"><h2>Move</h2><span class="badge sage">${wk} of ${p.move} min this week</span></div>
+  <div class="card"><div class="row">${glyph('bounce', 's')}<h2 class="grow">Move</h2><span class="badge sage">${wk} of ${p.move} min this week</span></div>
     <div class="bar" style="margin-top:10px"><i style="width:${pct(wk, p.move)}%"></i></div>
     ${todayM ? `<p class="small" style="margin-top:10px">${todayM} minutes today. ${d.m.map(x => esc(x.n)).join(', ')}.</p>` : ''}
     <div class="note sage" style="margin-top:12px"><div class="eyebrow">${todayM ? 'If you want more' : 'Idea for today'}</div><div class="row between" style="margin-top:4px"><div><b>${esc(sug.n)}</b><div class="small muted">${mins(sug)} min · ${sug.lvl}</div></div><button class="btn sm" data-a="routine" data-id="${sug.id}">Open</button></div></div></div>
 
-  <div class="card"><div class="row between"><h2>Supplements</h2><button class="linkbtn small" data-a="tab" data-t="supps">${supList.length ? 'Manage' : 'Add yours'}</button></div>
+  <div class="card"><div class="row">${glyph('pill')}<h2 class="grow">Supplements</h2><button class="linkbtn small" data-a="tab" data-t="supps">${supList.length ? 'Manage' : 'Add yours'}</button></div>
     ${supList.length ? `<div class="list" style="margin-top:4px">${supList.map(s => `<button data-a="tookSupp" data-id="${s.id}" style="width:100%;text-align:left" aria-pressed="${!!d.s[s.id]}"><span class="check ${d.s[s.id] ? 'on' : ''}">✓</span><span class="grow"><b>${esc(s.name)}</b>${s.dose ? ' <span class="muted small">' + esc(s.dose) + '</span>' : ''}</span><span class="badge">${esc(s.when)}</span></button>`).join('')}</div>`
       : '<p class="small muted" style="margin-top:8px">Add what you take and check it off here each day.</p>'}</div>
 
-  <div class="card"><h2>One little win</h2><p class="small muted" style="margin-top:4px">Anything you did for yourself today. It doesn't have to be about health.</p>
+  <div class="card"><div class="row">${glyph('star', 'h')}<h2>One little win</h2></div><p class="small muted" style="margin-top:4px">Anything you did for yourself today. It doesn't have to be about health.</p>
     <input id="win" style="margin-top:10px" value="${esc(d.win)}" placeholder="Today I…" data-change="win" aria-label="Today's little win">
     <div class="scroller" style="margin-top:10px">${WINS.map(w => `<button class="chip" data-a="winPick" data-w="${esc(w)}">${w}</button>`).join('')}</div></div>
 
-  <div class="card"><div class="row between"><h2>My goals</h2><button class="linkbtn small" data-a="addGoal">Add one</button></div>
+  <div class="card"><div class="row">${glyph('flag', 's')}<h2 class="grow">My goals</h2><button class="linkbtn small" data-a="addGoal">Add one</button></div>
     ${S.myGoals.length ? `<div class="list" style="margin-top:4px">${S.myGoals.map(g => `<div><button class="check ${g.done ? 'on' : ''}" data-a="goalDone" data-id="${g.id}" aria-label="Mark done">✓</button><span class="grow" style="${g.done ? 'text-decoration:line-through;opacity:.6' : ''}">${esc(g.text)}</span><button class="x" data-a="goalDel" data-id="${g.id}" aria-label="Remove goal">✕</button></div>`).join('')}</div>`
       : '<p class="small muted" style="margin-top:8px">Write your own, in your words. "Touch my toes by Christmas." "Walk the whole zoo without stopping."</p>'}</div>`;
 }
@@ -239,7 +260,7 @@ function recipeSheet(id) {
 const KIND = { bounce: ['Rebounder', 'sage'], stretch: ['Stretch', 'plum'], breath: ['Breathing', 'water'] };
 function renderMove() {
   const wk = weekMove(), p = P();
-  const card = r => `<button class="card" data-a="routine" data-id="${r.id}" style="display:block;width:100%;text-align:left;margin-top:10px"><div class="row between"><h3>${esc(r.n)}</h3><span class="badge ${KIND[r.kind][1]}">${mins(r)} min</span></div><p class="small muted" style="margin-top:4px">${esc(r.blurb)}</p></button>`;
+  const card = r => `<button class="ticket ${r.kind}" data-a="routine" data-id="${r.id}"><span class="main"><h3>${esc(r.n)}</h3><p class="small muted" style="margin-top:4px">${esc(r.blurb)}</p><span class="tiny muted" style="display:block;margin-top:6px;font-weight:700">Admit one, ${r.lvl.toLowerCase()}</span></span><span class="stub"><span><b>${mins(r)}</b><span class="tiny" style="display:block;font-weight:700">min</span></span></span></button>`;
   const grp = (k, t) => `<div class="sec"><h2>${t}</h2></div>${ROUTINES.filter(r => r.kind === k).map(card).join('')}`;
   return `<h1>Move</h1><p class="muted" style="margin-top:6px">Short sessions that build your breath and loosen you up. Some is always better than none.</p>
     <div class="card" style="margin-top:14px"><div class="row between"><b>This week</b><span>${wk} of ${p.move} min</span></div><div class="bar" style="margin-top:8px"><i style="width:${pct(wk, p.move)}%"></i></div>
@@ -247,7 +268,7 @@ function renderMove() {
     ${p.flags.knee || p.flags.preg ? `<div class="note" style="margin-top:14px">${p.flags.knee ? 'Since your knees are bothering you, check with your doctor or a physical therapist before bouncing, start with <b>First bounce</b>, and stop if anything hurts.' : 'While pregnant or recently postpartum, check with your doctor before rebounding. The stretch and breathing sessions are a gentler place to start.'}</div>` : ''}
     ${grp('bounce', 'On the rebounder')}
     <div class="card"><h3>How to tell it's working</h3><p class="small muted" style="margin-top:4px">Use the talk test. During the hard parts you should be breathing harder but still able to say a short sentence. If the same routine feels easier in a few weeks, your cardio is improving. That's the cue to move up.</p></div>
-    ${grp('stretch', 'Stretch & flexibility')}${grp('breath', 'Calm down')}
+    <div class="note plum" style="margin-top:14px">The gentle sessions pair well with a mystery podcast. Sixteen minutes is about half an episode.</div>${grp('stretch', 'Stretch & flexibility')}${grp('breath', 'Calm down')}
     <div class="sec"><h2>The six basic moves</h2></div><div class="card">${MOVES.map(m => `<details><summary>${esc(m[0])}</summary><p class="small" style="margin-top:6px">${esc(m[1])}</p><p class="small muted" style="margin-top:4px">${esc(m[2])}</p></details>`).join('')}</div>
     <div class="sec"><h2>Rules that protect your knees</h2></div><div class="card small stack"><p><b>Soft knees, always.</b> Never lock them straight at the top of a bounce.</p><p><b>Push down, don't jump up.</b> Press into the mat. Height isn't the goal.</p><p><b>Use the handlebar</b> if your rebounder has one, especially at first.</p><p><b>Bare feet or grip socks</b> on the mat; supportive indoor shoes if your arches need them.</p><p><b>Clear space, level floor,</b> and a glass of water before you start.</p></div>
     <div class="sec"><h2>Follow-along videos</h2></div><div class="card"><p class="small muted">Free YouTube channels with beginner-friendly rebounder classes. Opens YouTube.</p><div class="list" style="margin-top:4px">${VIDEOS.map(v => `<a href="https://www.youtube.com/results?search_query=${encodeURIComponent(v[2])}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><span class="grow"><b>${esc(v[0])}</b><div class="small muted">${esc(v[1])}</div></span><span class="muted">↗</span></a>`).join('')}</div></div>
@@ -295,7 +316,7 @@ function drawPlayer() {
   const st = PL.r.steps[PL.i], nx = PL.r.steps[PL.i + 1];
   $('#overlay').innerHTML = `<div class="player" role="dialog" aria-modal="true" aria-label="${esc(PL.r.n)}"><div class="row between"><div><div class="eyebrow">${esc(PL.r.n)}</div><div class="small muted">Step ${PL.i + 1} of ${PL.r.steps.length}</div></div><button class="btn sm ghost" data-a="endEarly">End</button></div>
     <div class="bar" style="margin-top:12px"><i id="pbar" style="width:${pct(PL.elapsed, sum(PL.r.steps, s => s[1]))}%"></i></div>
-    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:18px"><div class="stepname">${esc(st[0])}</div><div class="clock" id="clock" aria-live="off">${fmtClock(Math.ceil(PL.left))}</div><p style="text-align:center;font-size:18px" class="muted">${esc(st[2])}</p></div>
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:14px">${PL.r.kind === 'breath' ? `<div class="lung ${PL.i % 2 ? 'out' : 'in'}"></div>` : `<div class="stage ${PL.r.kind === 'stretch' ? 'stretch' : ''}" id="stage">${PL.r.kind === 'bounce' ? '<svg class="tramp" width="190" height="46" viewBox="0 0 190 46"><path d="M28 22v20M162 22v20M70 26v18M120 26v18" stroke="var(--ink)" stroke-width="4" stroke-linecap="round"/><ellipse class="mat" cx="95" cy="18" rx="88" ry="11" fill="var(--rose)" stroke="var(--ink)" stroke-width="3"/></svg>' : ''}<div class="hop">${COW(96, 'happy')}</div></div>`}<div class="stepname">${esc(st[0])}</div><div class="clock" id="clock" aria-live="off">${fmtClock(Math.ceil(PL.left))}</div><p style="text-align:center;font-size:18px" class="muted">${esc(st[2])}</p></div>
     <p class="small muted" style="text-align:center;min-height:22px">${nx ? 'Next: ' + esc(nx[0]) : 'Last one'}</p>
     <div class="row" style="margin-top:12px"><button class="btn ghost grow" data-a="pause">${PL.paused ? 'Resume' : 'Pause'}</button><button class="btn ghost grow" data-a="skip">Skip</button></div></div>`;
 }
@@ -305,7 +326,8 @@ function finishPlayer(done) {
   if (!done && elapsedSec < 45) { closeSheet(); return render(); }
   day().m.push({ min: m, n: r.n, id: r.id }); save(); if (done) { beep(880, 400); say('All done. Nice work.'); }
   $('#overlay').innerHTML = '';
-  sheet(`<div style="text-align:center">${COW(72)}<h2 style="margin-top:8px">${done ? 'Done. ' : ''}${m} minute${m > 1 ? 's' : ''} logged</h2><p class="muted" style="margin-top:6px">${r.kind === 'bounce' ? 'Have some water. A few stretches now will help your knees and hips.' : 'That was time well spent.'}</p></div>
+  if (done) confetti();
+  sheet(`<div style="text-align:center"><div style="display:inline-block">${COW(104, 'happy', done ? 'crown' : '')}</div><h2 style="margin-top:8px">${done ? 'Done. ' : ''}${m} minute${m > 1 ? 's' : ''} logged</h2><p class="muted" style="margin-top:6px">${r.kind === 'bounce' ? 'Have some water. A few stretches now will help your knees and hips.' : 'That was time well spent.'}</p></div>
     <div class="sec eyebrow">How did it feel?</div><div class="chips">${['Felt good', 'Knee or joint pain', 'Dizzy or unsteady', 'Leaking or pelvic heaviness', 'Just tired'].map((t, i) => `<button class="chip" data-a="feel" data-i="${i}">${t}</button>`).join('')}</div>
     <div class="stack" style="margin-top:18px">${r.kind === 'bounce' ? '<button class="btn block soft" data-a="start" data-id="m5">Do the 5-minute cool-down</button>' : ''}<button class="btn block" data-a="close">Finish</button></div>`);
   render();
@@ -350,7 +372,9 @@ function renderProgress() {
   const W = S.weights.slice().sort((a, b) => a.d < b.d ? -1 : 1), last7 = W.slice(-7), tr = last7.length ? (sum(last7, x => x.v) / last7.length) : 0;
   const wkKey = dkey(ds[0]), ref = S.reflect[wkKey] || '';
   return `<h1>Progress</h1><p class="muted" style="margin-top:6px">A look back, not a report card. Gaps are normal; just pick up where you are.</p>
-    <div class="card" style="margin-top:14px"><div class="row" style="gap:14px">${COW(56)}<div><div class="big">${showed} day${showed === 1 ? '' : 's'}</div><div class="small muted">you showed up for yourself in the last 30</div></div></div></div>
+    <div class="card" style="margin-top:14px"><div class="row" style="gap:14px">${COW(72, 'happy')}<div><div class="big">${showed} day${showed === 1 ? '' : 's'}</div><div class="small muted">you showed up for yourself in the last 30</div></div></div></div>
+    <div class="card"><div class="row between"><h3>Sticker book</h3><span class="badge">${S.cases || 0} case${S.cases === 1 ? '' : 's'} closed</span></div><p class="small muted" style="margin-top:4px">Close a daily case on the Today tab to earn the next one.</p>
+      <div class="stickers" style="margin-top:12px">${STICKERS.map((st, i) => `<div>${sticker(i, i < (S.cases || 0), 66)}<span>${i < (S.cases || 0) ? st[0] : 'Locked'}</span></div>`).join('')}</div></div>
     <div class="card"><div class="row between"><h3>Protein</h3><span class="small muted">avg ${avgP} g · goal ${p.protein}</span></div><div style="margin-top:12px">${chart(sumP, p.protein, 'var(--rose)')}</div></div>
     <div class="card"><div class="row between"><h3>Water</h3><span class="small muted">avg ${avgW} oz · goal ${p.water}</span></div><div style="margin-top:12px">${chart(sumW, p.water, 'var(--water)')}</div></div>
     <div class="card"><div class="row between"><h3>Movement</h3><span class="small muted">${wk} of ${p.move} min this week</span></div><div style="margin-top:12px">${chart(sumM, Math.max(5, Math.round(p.move / 5)), 'var(--sage)')}</div></div>
@@ -369,7 +393,9 @@ function renderProgress() {
 function settingsSheet() {
   const p = P(), notif = 'Notification' in window ? Notification.permission : 'unsupported';
   sheet(`<div class="row between"><h2>Settings</h2><button class="x" data-a="close" aria-label="Close">✕</button></div>
+    <div class="sec eyebrow">Colors</div><div class="swatches">${swatches()}</div>
     <div class="sec eyebrow">Me</div><div class="stack">
+      <div><label class="f" for="setCow">My cow's name</label><input id="setCow" value="${esc(S.cowName)}" maxlength="16" placeholder="Hazel, Fergus, Mabel…"></div>
       <div><label class="f" for="setName">Name</label><input id="setName" value="${esc(p.name)}"></div>
       <div><label class="f" for="setWhy">What feeling better looks like</label><textarea id="setWhy">${esc(p.why)}</textarea></div>
       <div class="row"><div class="grow"><label class="f" for="setP">Protein (g)</label><input id="setP" type="number" inputmode="numeric" value="${p.protein}"></div><div class="grow"><label class="f" for="setW">Water (oz)</label><input id="setW" type="number" inputmode="numeric" value="${p.water}"></div><div class="grow"><label class="f" for="setM">Move (min/wk)</label><input id="setM" type="number" inputmode="numeric" value="${p.move}"></div></div>
@@ -406,7 +432,9 @@ function checkReminders() {
 
 /* ---------- render ---------- */
 function render() {
+  applyTheme();
   if (!P().done) return renderOnboard();
+  checkCase();
   const t = S.ui.tab, app = $('#app');
   app.innerHTML = t === 'kitchen' ? renderKitchen() : t === 'move' ? renderMove() : t === 'supps' ? renderSupps() : t === 'progress' ? renderProgress() : renderToday();
   const tabs = $('#tabs'); tabs.hidden = false;
@@ -420,10 +448,13 @@ const A = {
   obFlag(d) { P().flags[d.id] = !P().flags[d.id]; save(); render(); },
   obCalc() { grab(); const lb = parseFloat(P().weight); if (lb > 60) { const r = suggestProtein(lb); P().protein = Math.round((r[0] + r[1]) / 10) * 5; } else toast('Enter your weight in pounds first.'); save(); render(); },
   obBack() { grab(); ob.step--; save(); render(); scrollTo(0, 0); },
-  obNext() { grab(); if (ob.step >= 4) { P().done = true; S.ui.tab = 'today'; } else ob.step++; save(); render(); scrollTo(0, 0); if (P().done) toast('You\'re all set' + (P().name ? ', ' + P().name : '') + '.'); },
+  obNext() { grab(); if (ob.step >= 5) { P().done = true; S.ui.tab = 'today'; } else ob.step++; save(); render(); scrollTo(0, 0); if (P().done) toast('You\'re all set' + (P().name ? ', ' + P().name : '') + '.'); },
   remToggle(d) { const r = S.rem.items.find(x => x.id === d.id); r.on = !r.on; save(); d.s ? settingsSheet() : render(); },
   tab(d) { S.ui.tab = d.t; save(); render(); scrollTo(0, 0); },
   settings() { settingsSheet(); },
+  theme(d) { grab(); S.theme = d.id; save(); applyTheme(); if (P().done) settingsSheet(); else render(); },
+  boop() { const pool = COW_FACTS.concat(COW_QUIPS); boopText = pool[Math.floor(Math.random() * pool.length)]; render(); clearTimeout(boopT); boopT = setTimeout(() => { boopText = ''; if (S.ui.tab === 'today' && !$('#overlay').innerHTML) render(); }, 6000); },
+  coffee(d) { const dd = day(); dd.c = Math.max(0, (dd.c || 0) + +d.n); save(); render(); if (+d.n > 0) toast(dd.c === 1 ? 'First cup. The day may begin.' : 'Cup number ' + dd.c + '. Chase it with some water.'); },
   close() { closeSheet(); },
   closeBg(d, el, e) { if (e.target === el) closeSheet(); },
   energy(d) { day().energy = +d.v; save(); render(); },
@@ -458,7 +489,7 @@ const A = {
   routine(d) { routineSheet(d.id); },
   voice() { S.ui.voice = !S.ui.voice; save(); const b = $('[data-a="voice"]'); if (b) { b.setAttribute('aria-pressed', S.ui.voice); b.firstElementChild.classList.toggle('on', S.ui.voice); } },
   start(d) { startPlayer(d.id); },
-  pause() { PL.paused = !PL.paused; if (PL.paused && window.speechSynthesis) speechSynthesis.cancel(); drawPlayer(); },
+  pause(d, el) { PL.paused = !PL.paused; if (PL.paused && window.speechSynthesis) speechSynthesis.cancel(); el.textContent = PL.paused ? 'Resume' : 'Pause'; const st = $('#stage'); if (st) st.classList.toggle('paused', PL.paused); },
   skip() { nextStep(); },
   endEarly() { finishPlayer(false); },
   feel(d) { toast(FEEL[+d.i]); const dd = day(), last = dd.m[dd.m.length - 1]; if (last) last.feel = +d.i; save(); },
@@ -472,12 +503,12 @@ const A = {
   addWeight() { const v = parseFloat($('#wIn').value); if (!(v > 40 && v < 700)) return toast('Enter a weight in pounds.'); S.weights = S.weights.filter(x => x.d !== tkey()); S.weights.push({ d: tkey(), v: Math.round(v * 10) / 10 }); save(); render(); },
   delWeight(d) { S.weights = S.weights.filter(x => x.d !== d.d); save(); render(); },
   setSkip(d, el) { toggle(P().skip, d.id); save(); el.classList.toggle('on'); },
-  setSave() { const p = P(); p.name = $('#setName').value.trim(); p.why = $('#setWhy').value.trim(); [['setP', 'protein'], ['setW', 'water'], ['setM', 'move']].forEach(x => { const v = +$('#' + x[0]).value; if (v > 0) p[x[1]] = Math.round(v); }); save(); closeSheet(); render(); toast('Saved.'); },
+  setSave() { const p = P(); p.name = $('#setName').value.trim(); p.why = $('#setWhy').value.trim(); S.cowName = $('#setCow').value.trim(); [['setP', 'protein'], ['setW', 'water'], ['setM', 'move']].forEach(x => { const v = +$('#' + x[0]).value; if (v > 0) p[x[1]] = Math.round(v); }); save(); closeSheet(); render(); toast('Saved.'); },
   ics() { if (!S.rem.items.some(r => r.on)) return toast('Turn on at least one reminder first.'); download('bounce-back-reminders.ics', makeICS(), 'text/calendar'); toast('Open the downloaded file to add them to your calendar.'); },
   notif() { if (!('Notification' in window)) return toast('This browser doesn\'t support pop-up notifications. Use the calendar option.'); Notification.requestPermission().then(p => { settingsSheet(); toast(p === 'granted' ? 'Pop-ups on.' : 'Not enabled.'); }); },
   export() { download('bounce-back-backup-' + tkey() + '.json', JSON.stringify(S), 'application/json'); },
   reset() { sheet(`<h2>Erase everything?</h2><p class="muted" style="margin-top:8px">This removes all your goals, logs and lists from this phone. It can't be undone.</p><div class="stack" style="margin-top:16px"><button class="btn block" data-a="resetYes">Yes, erase it</button><button class="btn block ghost" data-a="close">Keep my data</button></div>`); },
-  resetYes() { localStorage.removeItem(KEY); S = DEF(); ob.step = 0; closeSheet(); render(); }
+  resetYes() { localStorage.removeItem(KEY); S = DEF(); ob.step = 0; boopText = ''; closeSheet(); render(); }
 };
 document.addEventListener('click', e => { const el = e.target.closest('[data-a]'); if (!el) return; const fn = A[el.dataset.a]; if (fn) fn(el.dataset, el, e); });
 document.addEventListener('change', e => {
